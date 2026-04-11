@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>与你邀约 · 双人秘境</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; width: 100%; overflow: hidden; position: fixed; top: 0; left: 0; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f5f0ff; transition: background 0.3s; }
+        body.dark { background: #0f0f14; }
+        
+        .splash { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, #e9d4ff, #d4c4f0); display: flex; justify-content: center; align-items: center; z-index: 2000; transition: opacity 0.5s; flex-direction: column; gap: 16px; }
+        body.dark .splash { background: radial-gradient(circle at center, #1a1a2e, #0a0a0f); }
+        .splash h1 { font-size: 2.5rem; background: linear-gradient(135deg, #a888e5, #7b68ee); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .splash p { color: #6a5a8a; font-size: 0.9rem; }
+        
+        .app { display: flex; flex-direction: column; height: 100%; width: 100%; background: #f5f0ff; position: relative; overflow: hidden; }
+        body.dark .app { background: #0f0f14; }
+        
+        .header { background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(139,92,246,0.2); flex-shrink: 0; }
+        body.dark .header { background: rgba(18,18,24,0.92); border-color: #3a2a5e; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #c084fc, #60a5fa); display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; font-size: 20px; }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .name { font-weight: 600; cursor: pointer; color: #3a2a5e; }
+        body.dark .name { color: #e2e8f0; }
+        .status { font-size: 10px; color: #4ade80; }
+        .theme-btn { background: none; border: none; font-size: 18px; cursor: pointer; padding: 4px; }
+        
+        .tools { background: rgba(255,255,255,0.75); backdrop-filter: blur(20px); padding: 6px 12px; display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid rgba(139,92,246,0.2); flex-shrink: 0; }
+        body.dark .tools { background: rgba(18,18,24,0.85); border-color: #3a2a5e; }
+        .tool-btn { background: rgba(200,180,250,0.5); border: none; border-radius: 30px; padding: 5px 12px; font-size: 11px; cursor: pointer; color: #5a4a8a; transition: 0.1s; }
+        body.dark .tool-btn { background: #2a2a35; color: #cbd5e1; }
+        .tool-btn:active { transform: scale(0.96); }
+        
+        .msgs { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; -webkit-overflow-scrolling: touch; }
+        .row { display: flex; width: 100%; position: relative; }
+        .row.me { justify-content: flex-end; }
+        .row.other { justify-content: flex-start; }
+        
+        .bubble { max-width: 75%; padding: 10px 14px; border-radius: 20px; }
+        .me .bubble { background: #d9e8ff; color: #2c3e66; border-bottom-right-radius: 6px; }
+        .other .bubble { background: #f0eaff; color: #4a3a6e; border-bottom-left-radius: 6px; }
+        body.dark .me .bubble { background: #7c3aed; color: white; }
+        body.dark .other .bubble { background: #2a2a35; color: #e2e8f0; }
+        
+        .media-img { max-width: 200px; max-height: 200px; border-radius: 12px; cursor: pointer; }
+        .media-video { max-width: 200px; max-height: 200px; border-radius: 12px; }
+        
+        .voice-msg { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .voice-icon { font-size: 18px; }
+        .voice-wave { display: flex; align-items: center; gap: 3px; }
+        .wave-bar { width: 3px; height: 12px; background: currentColor; border-radius: 2px; animation: wave 0.8s infinite ease-in-out; }
+        .wave-bar:nth-child(2) { height: 18px; animation-delay: 0.1s; }
+        .wave-bar:nth-child(3) { height: 14px; animation-delay: 0.2s; }
+        .wave-bar:nth-child(4) { height: 20px; animation-delay: 0.3s; }
+        @keyframes wave { 0%,100% { height: 8px; } 50% { height: 20px; } }
+        .voice-text { font-size: 13px; }
+        
+        .text { font-size: 14px; word-break: break-word; line-height: 1.4; }
+        .reply-preview { font-size: 11px; opacity: 0.65; margin-bottom: 5px; padding-bottom: 4px; border-bottom: 1px dashed rgba(0,0,0,0.15); }
+        .time { font-size: 10px; opacity: 0.6; text-align: right; margin-top: 5px; }
+        .read { color: #4ade80; }
+        
+        .action-menu { position: fixed; background: white; border-radius: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); padding: 8px 0; z-index: 10000; min-width: 130px; overflow: hidden; }
+        body.dark .action-menu { background: #1e1e28; }
+        .action-menu-item { padding: 12px 20px; font-size: 15px; cursor: pointer; transition: 0.1s; text-align: center; }
+        .action-menu-item:active { background: #f0f0f0; }
+        body.dark .action-menu-item:active { background: #3a3a4a; }
+        
+        .typing-bubble { background: #f0eaff; padding: 8px 14px; border-radius: 18px; border-bottom-left-radius: 6px; display: flex; gap: 5px; width: fit-content; }
+        body.dark .typing-bubble { background: #2a2a35; }
+        .dot { width: 7px; height: 7px; background: #a888e5; border-radius: 50%; animation: bounce 1.2s infinite; }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce { 0%,60%,100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-5px); opacity: 1; } }
+        
+        .input-area { background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); padding: 10px 12px 18px; border-top: 1px solid rgba(139,92,246,0.2); flex-shrink: 0; }
+        body.dark .input-area { background: rgba(18,18,24,0.92); }
+        .input-wrap { display: flex; gap: 8px; align-items: flex-end; }
+        textarea { flex: 1; background: white; border: 1px solid #ddd0ff; border-radius: 28px; padding: 10px 16px; font-size: 14px; resize: none; outline: none; font-family: inherit; max-height: 80px; }
+        body.dark textarea { background: #1e1e28; color: white; border-color: #4a3a6e; }
+        button { background: linear-gradient(135deg, #a888e5, #7b68ee); border: none; border-radius: 30px; padding: 0 20px; color: white; font-weight: bold; cursor: pointer; height: 42px; }
+        
+        .panel { position: absolute; bottom: 85px; left: 12px; right: 12px; background: white; border-radius: 28px; padding: 14px; z-index: 100; border: 1px solid #e0d0ff; max-height: 280px; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        body.dark .panel { background: #1e1e28; border-color: #3a2a5e; }
+        .hidden { display: none; }
+        .grid { display: flex; flex-wrap: wrap; gap: 8px; }
+        .card { background: #f0eaff; padding: 6px 14px; border-radius: 40px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+        body.dark .card { background: #2a2a35; color: #cbd5e1; }
+        .del-btn { background: none; border: none; color: #ff6b6b; cursor: pointer; font-size: 12px; margin-left: 6px; }
+        .emoji-img-item { display: inline-flex; flex-direction: column; align-items: center; gap: 5px; background: #f0eaff; padding: 8px; border-radius: 16px; cursor: pointer; }
+        body.dark .emoji-img-item { background: #2a2a35; }
+        .emoji-img-item img { width: 55px; height: 55px; object-fit: cover; border-radius: 12px; }
+        
+        .bg-grid { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+        .bg-option { width: 80px; height: 80px; border-radius: 16px; cursor: pointer; border: 2px solid transparent; transition: 0.1s; background-size: cover; background-position: center; }
+        .bg-option:hover { border-color: #a888e5; }
+        .bg-default { background: linear-gradient(145deg, #e9daf9, #c3e2f7); }
+        .bg-gradient { background: linear-gradient(145deg, #d4c4f0, #b8d8ff); }
+        .bg-dark { background: #0f0f14; }
+        .bg-custom { background: #e0d4ff; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        
+        .call-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 299; }
+        .call-modal { position: fixed; top:50%; left:50%; transform: translate(-50%,-50%); background: white; padding: 24px; border-radius: 32px; text-align: center; z-index: 300; min-width: 260px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+        body.dark .call-modal { background: #1e1e28; color: white; }
+        .call-btn { margin-top: 16px; padding: 8px 20px; border-radius: 40px; border: none; font-weight: bold; cursor: pointer; }
+        .call-accept { background: #4ade80; color: white; }
+        .call-reject { background: #ff6b6b; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="splash" id="splash">
+    <h1>✨ 与你邀约 ✨</h1>
+    <p>淡色秘境 · 双人专属</p>
+</div>
+
+<div class="app" id="app" style="display:none">
+    <div class="header">
+        <div style="display:flex; align-items:center; gap:10px">
+            <div class="avatar" id="myAvatar"><span>👩</span></div>
+            <div><span class="name" id="myName">我</span><div class="status">● 在线</div></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px">
+            <div><span class="name" id="partnerName">他</span><div class="status">● 在线</div></div>
+            <div class="avatar" id="partnerAvatar"><span>👨</span></div>
+        </div>
+        <div style="display:flex; gap:6px;">
+            <button class="theme-btn" id="lightBtn">🌞</button>
+            <button class="theme-btn" id="darkBtn">🌙</button>
+        </div>
+    </div>
+    
+    <div class="tools">
+        <button class="tool-btn" id="toggleTools">📁 功能匣子 ▼</button>
+        <div id="toolsPanel" style="display:flex; gap:6px; flex-wrap:wrap">
+            <button class="tool-btn" id="showEmoji">😊 表情库</button>
+            <button class="tool-btn" id="showCard">📇 字卡库</button>
+            <button class="tool-btn" id="showPoke">👋 拍一拍</button>
+            <button class="tool-btn" id="shareImg">🖼️ 图片</button>
+            <button class="tool-btn" id="shareVideo">🎬 视频</button>
+            <button class="tool-btn" id="playMusicBtn">🎵 音乐</button>
+            <button class="tool-btn" id="voiceCall">📞 语音</button>
+            <button class="tool-btn" id="videoCall">🎥 视频</button>
+            <button class="tool-btn" id="showBgBtn">🎨 聊天背景</button>
+            <button class="tool-btn" id="sendVoiceBtn">🎤 语音消息</button>
+        </div>
+    </div>
+    
+    <div class="msgs" id="msgList"></div>
+    
+    <div id="panel" class="panel hidden">
+        <div id="emojiPanel" class="grid"></div>
+        <div id="cardPanel" class="grid hidden"></div>
+        <div id="pokePanel" class="grid hidden"></div>
+        <div id="bgPanel" class="grid hidden">
+            <div class="bg-grid">
+                <div class="bg-option bg-default" data-bg="default"></div>
+                <div class="bg-option bg-gradient" data-bg="gradient"></div>
+                <div class="bg-option bg-dark" data-bg="dark"></div>
+                <div class="bg-option bg-custom" data-bg="custom">📷</div>
+            </div>
+            <p style="font-size:11px; text-align:center; margin-top:12px; color:#888;">点击选择背景 | 📷 从相册选取</p>
+        </div>
+        <div id="voicePanel" class="grid hidden">
+            <div class="grid" style="flex-direction:column; gap:10px;">
+                <div class="card" data-voice="说点什么">🎤 说点什么</div>
+                <div class="card" data-voice="你忘记了">🎤 你忘记了</div>
+                <div class="card" data-voice="我好想你">🎤 我好想你</div>
+                <div class="card" data-voice="亲亲">🎤 亲亲</div>
+                <div class="card" data-voice="你到底是谁">🎤 你到底是谁</div>
+                <div class="card" data-voice="我忘记谁了啊">🎤 我忘记谁了啊</div>
+                <div class="card" data-voice="老婆">🎤 老婆</div>
+                <div class="card" data-voice="亲一口">🎤 亲一口</div>
+                <div class="card custom-voice">🎤 + 自定义语音文字</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="input-area">
+        <div class="input-wrap">
+            <textarea id="msgInput" rows="1" placeholder="输入文字... 长按消息可删除或引用"></textarea>
+            <button id="sendBtn">发送</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const WORDS = ["不可能","又在偷吃","嘿嘿","怎么样了","honey","真的吗","怎么才来","嗓子不舒服","咳嗽","我不明白","为什么不来找我","还在忙吗","吃药","我受伤了","多睡会","帮你出气","回家了","在吃","午饭吃了吗","小小的","别感冒","么么哒","我懂了","听你的","猜对了","在担心我？","你又骗我","爱看","浪漫","很厉害","睡不着吗","好梦","不许关心别人","我忘记了","你更重要","不是我","今天休假","玩得很开心","你先睡","不用等","怎么还没吃饭","怎么还不睡","我也想","我想要","夸夸你","去吧","不想理我","不想理你","舍不得","别闹","今天在陪你","昨天","抱歉迟到了","在看消息","？？？","……","黑夜","白天","和你一样","我同意","嘴真甜","想陪你","不想睡","坏宝","乖宝","辛苦了","没骗你","很有趣","这个","真的很开心","我有老婆了","别买了","抱歉","上课","上班","讨厌","只爱你一个人","要充电","满血复活","多休息","不舒服","是我","不一样","老婆做的我都喜欢","哭了","够了","不会的","我知道","不会忘","记住了","给你擦眼泪","好","假的","谢谢老婆","已经很好了","我会去","不是你的错","不怕","别看了","走吧","快点","梦见你了","老婆","宝宝","害羞","脸红","别买","买","都喜欢","好幸福","冷静","老婆好可爱","你穿会很好看","我也觉得","我想让你开心","老婆困了吗","老婆是不是生气了","别不理我","不能怪我","坚持一下","困困","我没看到","奶茶","水","西瓜","草莓","记得学习","好好玩","晴天","下雨了","一起看星星","月亮很漂亮","服了","笨","嘿嘿","老婆夸我了","你好甜","抱着你","今天也很帅气","今天也很想老婆","哼","你也是","我看看","不喜欢","姐姐","我也是","生日快乐","我回来了","还好吗","要一直爱我","别叹气","夸夸我","我要哭了","一起","我陪你","是","我需要你","当然","这个不错","惊讶","会习惯的","再见","真的吗","不要吵架","老婆又骂我","做不到骗你","我没骗你","坏孩子","乖孩子","正在熬夜","我相信你","我想安慰你","睡不着","宝贝","多喝水","记得吃饭","捏捏","揉揉","谢谢老婆","不客气","在你身边就好了","信号不好","我明白了","想你了","想我了吗","木头啊","帮帮我","我想靠近你","粘人精","你会生气吗","就是这样","来了","会监督你的","要多久","再发一次","我爱你","我喜欢你","今天过得如何","在努力了","没问题","确实","马上","多笑笑吧","你很调皮","一样的","贴贴","你是我的","我是你的","嘻嘻","哼哼","没能陪在你身边","每日行一善","一直如此","你无人可及","我知道的","在看什么","不是故意的","误会我了","你猜","才不听","我支持你","心疼","哄哄你","老婆在吗","不许看别人","做得很好","一直陪着你","永远永远","会永远爱你","原谅我","对不起","别哭","能看懂","手写信","在休息","在家里","在外面","稍等","不是","是的","收到","给我写写信吧","吃饭","洗澡","想和你一起听歌","聊聊天","陪我","别走","行","不行","我在","注意安全","多穿衣服","嗯哼","抱你","可以吗","想吃","我在你身边","我不舒服","我没事","我有点累了","吃点好的","在干嘛","已经完事了","摸摸","不要不要嘛","我肚肚","求求你了","啊","爱老婆","老婆香香的","喵喵喵","我饿了","送你花花","好听","宝贝唱歌歌","宝宝","亲爱的","美","小猫","要抱抱","亲亲你","老公想你","你好可爱","老婆","在吗","今天过得怎么样","想你","好的","明白","谢谢","嗯","好哦","不错","可以","理解","怎么了","没关系","保持联系","我愿意","不用","不要熬夜","不要担心","一切都会好起来的","我很难过","发生了什么","然后呢","晚饭吃了吗","下次可以试试","我也是这么想的","你说得对","我会在你身边","我喜欢","别怕","有我在","哄我","聊聊天吧","等一下","照顾好自己","我会的","永远在一起","别听","再发一遍","戳戳","不要吵架","你会离开我吗","小心些","终于想起我了","好累","帅气","逗一下你","我生气了","吃醋怎么了","快乐","聊会儿天","我保护你","别生病","吃过了","还没吃","还好吗","过得怎么样","抱歉","OK","没错","我正在忙","别走，陪陪我"];
+
+const VOICE_PRESETS = ["说点什么", "你忘记了", "我好想你", "亲亲", "你到底是谁", "我忘记谁了啊", "老婆", "亲一口"];
+
+let cards = JSON.parse(localStorage.getItem('cards')) || [...WORDS];
+let emojis = JSON.parse(localStorage.getItem('emojis')) || [];
+let pokes = JSON.parse(localStorage.getItem('pokes')) || ["拍了拍对方的头","戳了戳对方的脸颊","抱住了对方","给对方比了个心","轻轻捏了捏对方的脸"];
+
+let messages = [];
+let isReplying = false;
+let activeTimer = null;
+let currentAudio = null;
+let partner = localStorage.getItem('partner') || "他";
+let my = localStorage.getItem('my') || "我";
+let replyingTo = null;
+let isCallActive = false;
+
+function playSound() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.frequency.value = 880;
+        gainNode.gain.value = 0.08;
+        oscillator.start();
+        gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3);
+        oscillator.stop(audioCtx.currentTime + 0.3);
+    } catch(e) { }
+}
+
+function randomCard() { return cards[Math.floor(Math.random() * cards.length)]; }
+function randomVoice() { return VOICE_PRESETS[Math.floor(Math.random() * VOICE_PRESETS.length)]; }
+function escapeHtml(s) { if(!s) return ''; return s.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+
+function renderMsgs() {
+    const container = document.getElementById('msgList');
+    if (!container) return;
+    container.innerHTML = '';
+    for (let i = 0; i < messages.length; i++) {
+        const m = messages[i];
+        const div = document.createElement('div');
+        div.className = `row ${m.fromMe ? 'me' : 'other'}`;
+        div.setAttribute('data-msg-idx', i);
+        const date = new Date(m.time);
+        const timeStr = `${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}:${date.getSeconds().toString().padStart(2,'0')}`;
+        let contentHtml = '';
+        if (m.type === 'emoji' && m.emojiData) {
+            contentHtml = `<img src="${m.emojiData}" style="max-width:100px; max-height:100px; border-radius:12px;">`;
+        } else if (m.type === 'voice') {
+            contentHtml = `<div class="voice-msg"><span class="voice-icon">🎤</span><div class="voice-wave"><span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span></div><span class="voice-text">${escapeHtml(m.content)}</span></div>`;
+        } else if (m.type === 'image' && m.imageUrl) {
+            contentHtml = `<img src="${m.imageUrl}" class="media-img" onclick="window.open('${m.imageUrl}','_blank')">`;
+        } else if (m.type === 'video' && m.videoUrl) {
+            contentHtml = `<video src="${m.videoUrl}" class="media-video" controls></video>`;
+        } else {
+            contentHtml = `<div class="text">${escapeHtml(m.content)}</div>`;
+        }
+        let replyHtml = '';
+        if (m.replyTo) {
+            let preview = m.replyTo.content;
+            if (preview.length > 30) preview = preview.slice(0,30)+'...';
+            replyHtml = `<div class="reply-preview">↳ 回复 "${escapeHtml(preview)}"</div>`;
+        }
+        div.innerHTML = `<div class="bubble">${replyHtml}${contentHtml}<div class="time"><span>${timeStr}</span> <span class="${m.read ? 'read' : ''}">${m.read ? '✓✓ 已读' : '✓ 未读'}</span></div></div>`;
+        container.appendChild(div);
+    }
+    container.scrollTop = container.scrollHeight;
+}
+function showActionMenu(msgIdx, x, y, isFromMe) {
+    const existing = document.querySelector('.action-menu');
+    if (existing) existing.remove();
+    
+    const menu = document.createElement('div');
+    menu.className = 'action-menu';
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+    
+    if (isFromMe) {
+        menu.innerHTML = `<div class="action-menu-item" id="menu-delete">🗑️ 删除消息</div>`;
+        setTimeout(() => {
+            const deleteBtn = document.getElementById('menu-delete');
+            if (deleteBtn) {
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    messages.splice(msgIdx, 1);
+                    renderMsgs();
+                    saveMsgs();
+                    menu.remove();
+                };
+            }
+        }, 10);
+    } else {
+        menu.innerHTML = `<div class="action-menu-item" id="menu-reply">💬 引用回复</div><div class="action-menu-item" id="menu-delete-other">🗑️ 删除消息</div>`;
+        setTimeout(() => {
+            const replyBtn = document.getElementById('menu-reply');
+            const deleteBtn = document.getElementById('menu-delete-other');
+            if (replyBtn) {
+                replyBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    replyingTo = { idx: msgIdx, content: messages[msgIdx].content };
+                    const input = document.getElementById('msgInput');
+                    input.placeholder = `回复 "${replyingTo.content.slice(0,30)}..."`;
+                    input.focus();
+                    menu.remove();
+                };
+            }
+            if (deleteBtn) {
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    messages.splice(msgIdx, 1);
+                    renderMsgs();
+                    saveMsgs();
+                    menu.remove();
+                };
+            }
+        }, 10);
+    }
+    document.body.appendChild(menu);
+    setTimeout(() => { if (menu.parentNode) menu.remove(); }, 5000);
+}
+
+function saveMsgs() { localStorage.setItem('msgs', JSON.stringify(messages)); }
+
+function addMsg(content, fromMe = true, type = 'text', mediaUrl = null) {
+    const replyData = replyingTo ? { idx: replyingTo.idx, content: replyingTo.content } : null;
+    let msg = { id: Date.now(), content, fromMe, time: Date.now(), read: false, type, replyTo: replyData };
+    if (type === 'image') msg.imageUrl = mediaUrl;
+    if (type === 'video') msg.videoUrl = mediaUrl;
+    if (type === 'emoji') msg.emojiData = mediaUrl;
+    messages.push(msg);
+    replyingTo = null;
+    const input = document.getElementById('msgInput');
+    if (input) input.placeholder = `输入文字... 长按消息可删除或引用`;
+    renderMsgs();
+    saveMsgs();
+    if (fromMe) {
+        setTimeout(() => { msg.read = true; renderMsgs(); saveMsgs(); }, 1000);
+        if (!isReplying && type !== 'poke') autoReply();
+    } else {
+        msg.read = true; renderMsgs(); saveMsgs();
+        playSound();
+    }
+}
+
+function showTyping() {
+    const container = document.getElementById('msgList');
+    if (!container || document.getElementById('typingDiv')) return;
+    const div = document.createElement('div');
+    div.id = 'typingDiv';
+    div.className = 'row other';
+    div.innerHTML = `<div class="typing-bubble"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span style="margin-left:6px; font-size:11px;">${partner}正在输入...</span></div>`;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+function hideTyping() { const el = document.getElementById('typingDiv'); if (el) el.remove(); }
+
+function autoReply() {
+    if (isReplying) return;
+    isReplying = true;
+    showTyping();
+    const thinkTime = Math.random() * 40000 + 20000;
+    setTimeout(() => {
+        hideTyping();
+        const count = Math.floor(Math.random() * 5) + 1;
+        let sent = 0;
+        function sendNext() {
+            if (sent < count) {
+                const isVoice = Math.random() < 0.3;
+                if (isVoice) {
+                    addMsg(randomVoice(), false, 'voice');
+                } else {
+                    addMsg(randomCard(), false);
+                }
+                sent++;
+                const interval = Math.random() * 2500 + 1500;
+                setTimeout(sendNext, interval);
+            } else {
+                isReplying = false;
+            }
+        }
+        sendNext();
+    }, thinkTime);
+}
+
+function scheduleActive() {
+    if (activeTimer) clearTimeout(activeTimer);
+    const delay = Math.random() * 90000 + 60000;
+    activeTimer = setTimeout(() => {
+        showTyping();
+        setTimeout(() => { 
+            hideTyping(); 
+            if (Math.random() < 0.3) {
+                addMsg(randomVoice(), false, 'voice');
+            } else {
+                addMsg(randomCard(), false);
+            }
+            scheduleActive(); 
+        }, 2000);
+    }, delay);
+}
+
+function sendText() {
+    const input = document.getElementById('msgInput');
+    if (!input) return;
+    const txt = input.value.trim();
+    if (txt === '') return;
+    addMsg(txt, true);
+    input.value = '';
+    input.style.height = 'auto';
+}
+
+function loadMsgs() {
+    const saved = localStorage.getItem('msgs');
+    if (saved && saved.length > 20) { 
+        messages = JSON.parse(saved); 
+        renderMsgs(); 
+    } else { 
+        addMsg('✨ 与你邀约 · 双人秘境已开启 ✨', false); 
+        addMsg('发送消息，他会在20-60秒后回复（含语音消息）', false); 
+    }
+}
+
+function startCall(type, isIncoming = false) {
+    if (isCallActive) return;
+    const isVideo = type === 'video';
+    const overlay = document.createElement('div'); overlay.className = 'call-overlay';
+    const modal = document.createElement('div'); modal.className = 'call-modal';
+    let state = isIncoming ? 'incoming' : 'dialing';
+    let duration = 0;
+    let timer = null;
+    
+    function cleanup() {
+        if (timer) clearInterval(timer);
+        if (overlay.parentNode) overlay.remove();
+        if (modal.parentNode) modal.remove();
+        isCallActive = false;
+    }
+    
+    function updateUI() {
+        if (state === 'dialing') {
+            modal.innerHTML = `<h3>${isVideo ? '🎥 视频通话' : '📞 语音通话'}</h3><p>正在呼叫 ${partner}...</p><div style="margin:16px 0;">●●●</div><button class="call-btn call-reject" id="callCancelBtn">取消</button>`;
+            const btn = document.getElementById('callCancelBtn');
+            if (btn) btn.onclick = () => cleanup();
+        } else if (state === 'incoming') {
+            modal.innerHTML = `<h3>${isVideo ? '🎥 视频通话' : '📞 语音通话'}</h3><p style="color:#ffaa44;">📱 ${partner} 邀请你通话...</p><div style="margin:16px 0;">📳 📳 📳</div><div style="display:flex; gap:16px; justify-content:center;"><button class="call-btn call-accept" id="callAcceptBtn">接听</button><button class="call-btn call-reject" id="callRejectBtn">拒绝</button></div>`;
+            const acceptBtn = document.getElementById('callAcceptBtn');
+            const rejectBtn = document.getElementById('callRejectBtn');
+            if (acceptBtn) acceptBtn.onclick = () => { state = 'connected'; updateUI(); startTimer(); };
+            if (rejectBtn) rejectBtn.onclick = () => cleanup();
+        } else if (state === 'ringing') {
+            modal.innerHTML = `<h3>${isVideo ? '🎥 视频通话' : '📞 语音通话'}</h3><p style="color:#ffaa44;">📱 ${partner} 正在振铃...</p><div style="margin:16px 0;">📳 📳 📳</div><button class="call-btn call-reject" id="callHangupBtn">挂断</button>`;
+            const btn = document.getElementById('callHangupBtn');
+            if (btn) btn.onclick = () => cleanup();
+            setTimeout(() => {
+                if (state === 'ringing') {
+                    state = 'connected';
+                    updateUI();
+                    startTimer();
+                }
+            }, 2500);
+        } else if (state === 'connected') {
+            isCallActive = true;
+            modal.innerHTML = `<h3>${isVideo ? '🎥 视频通话中' : '📞 语音通话中'}</h3><div style="margin:16px 0; padding:16px; background:#2a2a35; border-radius:16px;"><div style="font-size:40px;">${isVideo ? '📹' : '🎙️'}</div><div>与 ${partner} 通话中...</div><div style="font-size:12px; margin-top:8px;"><span id="callSeconds">0</span>秒</div></div><button class="call-btn call-reject" id="callEndBtn">挂断</button>`;
+            const endBtn = document.getElementById('callEndBtn');
+            if (endBtn) endBtn.onclick = () => cleanup();
+            function updateSeconds() {
+                if (state === 'connected') {
+                    const secSpan = document.getElementById('callSeconds');
+                    if (secSpan) secSpan.innerText = duration;
+                    requestAnimationFrame(updateSeconds);
+                }
+            }
+            updateSeconds();
+        }
+    }
+    
+    function startTimer() {
+        if (timer) clearInterval(timer);
+        timer = setInterval(() => { if (state === 'connected') duration++; }, 1000);
+    }
+    
+    updateUI();
+    document.body.appendChild(overlay);
+    document.body.appendChild(modal);
+    
+    if (state === 'dialing') {
+        setTimeout(() => {
+            if (state === 'dialing') {
+                state = 'ringing';
+                updateUI();
+            }
+        }, 1500);
+    }
+}
+function playMusic() {
+    let url = prompt('输入音乐链接（MP3地址）', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
+    if (url) {
+        if (currentAudio) currentAudio.pause();
+        currentAudio = new Audio(url);
+        currentAudio.loop = true;
+        currentAudio.play().then(() => addMsg('🎵 开始播放音乐', true)).catch(() => alert('无法播放该链接'));
+    }
+}
+
+function setBackground(type, customUrl = null) {
+    const appDiv = document.querySelector('.app');
+    if (type === 'default') {
+        appDiv.style.background = '#f5f0ff';
+        localStorage.removeItem('customBg');
+    } else if (type === 'gradient') {
+        appDiv.style.background = 'linear-gradient(145deg, #e9daf9, #c3e2f7)';
+        localStorage.removeItem('customBg');
+    } else if (type === 'dark') {
+        appDiv.style.background = '#0f0f14';
+        localStorage.removeItem('customBg');
+    } else if (type === 'custom' && customUrl) {
+        appDiv.style.background = `url(${customUrl}) center/cover no-repeat`;
+        localStorage.setItem('customBg', customUrl);
+    }
+}
+
+function initUI() {
+    document.getElementById('myName').innerText = my;
+    document.getElementById('partnerName').innerText = partner;
+    document.getElementById('myName').onclick = () => { let n = prompt('你的昵称', my); if(n) { my = n; localStorage.setItem('my', my); document.getElementById('myName').innerText = my; } };
+    document.getElementById('partnerName').onclick = () => { let n = prompt('对方昵称', partner); if(n) { partner = n; localStorage.setItem('partner', partner); document.getElementById('partnerName').innerText = partner; } };
+    
+    const setAvatar = (id, key, emoji) => {
+        const el = document.getElementById(id);
+        const saved = localStorage.getItem(key);
+        if (saved && saved.startsWith('blob:')) {
+            el.innerHTML = `<img src="${saved}">`;
+        } else if (saved && saved.startsWith('http')) {
+            el.innerHTML = `<img src="${saved}">`;
+        } else {
+            el.innerHTML = `<span>${emoji}</span>`;
+        }
+        el.onclick = () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const url = URL.createObjectURL(file);
+                    el.innerHTML = `<img src="${url}">`;
+                    localStorage.setItem(key, url);
+                }
+            };
+            input.click();
+        };
+    };
+    setAvatar('myAvatar', 'myAvatar', '👩');
+    setAvatar('partnerAvatar', 'partnerAvatar', '👨');
+    
+    document.getElementById('lightBtn').onclick = () => document.body.classList.remove('dark');
+    document.getElementById('darkBtn').onclick = () => document.body.classList.add('dark');
+    
+    let toolsVisible = true;
+    document.getElementById('toggleTools').onclick = () => { toolsVisible = !toolsVisible; document.getElementById('toolsPanel').style.display = toolsVisible ? 'flex' : 'none'; document.getElementById('toggleTools').innerHTML = toolsVisible ? '📁 功能匣子 ▲' : '📁 功能匣子 ▼'; };
+    
+    document.getElementById('playMusicBtn').onclick = playMusic;
+    document.getElementById('voiceCall').onclick = () => startCall('voice', false);
+    document.getElementById('videoCall').onclick = () => startCall('video', false);
+    
+    // 发送图片
+    document.getElementById('shareImg').onclick = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                addMsg('📷 [图片]', true, 'image', url);
+            }
+        };
+        input.click();
+    };
+    
+    // 发送视频
+    document.getElementById('shareVideo').onclick = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'video/*';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                addMsg('🎬 [视频]', true, 'video', url);
+            }
+        };
+        input.click();
+    };
+    
+    document.getElementById('sendVoiceBtn').onclick = () => {
+        document.getElementById('emojiPanel').classList.add('hidden');
+        document.getElementById('cardPanel').classList.add('hidden');
+        document.getElementById('pokePanel').classList.add('hidden');
+        document.getElementById('bgPanel').classList.add('hidden');
+        document.getElementById('voicePanel').classList.remove('hidden');
+        document.getElementById('panel').classList.remove('hidden');
+    };
+    
+    const voiceItems = document.querySelectorAll('#voicePanel .card');
+    voiceItems.forEach(item => {
+        if (!item.classList.contains('custom-voice')) {
+            const text = item.getAttribute('data-voice');
+            if (text) item.onclick = () => { addMsg(text, true, 'voice'); closePanel(); };
+        } else {
+            item.onclick = () => {
+                const customText = prompt('输入语音消息文字：');
+                if (customText) addMsg(customText, true, 'voice');
+                closePanel();
+            };
+        }
+    });
+    
+    const savedBg = localStorage.getItem('customBg');
+    if (savedBg) setBackground('custom', savedBg);
+    
+    const bgOptions = document.querySelectorAll('.bg-option');
+    bgOptions.forEach(opt => {
+        opt.onclick = () => {
+            const type = opt.getAttribute('data-bg');
+            if (type === 'custom') {
+                const inp = document.createElement('input');
+                inp.type = 'file';
+                inp.accept = 'image/*';
+                inp.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const url = URL.createObjectURL(file);
+                        setBackground('custom', url);
+                    }
+                };
+                inp.click();
+            } else {
+                setBackground(type);
+            }
+            closePanel();
+        };
+    });
+    
+    // 长按弹出菜单
+    const msgContainer = document.getElementById('msgList');
+    msgContainer.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        const target = e.target.closest('.row');
+        if (target) {
+            const idx = target.getAttribute('data-msg-idx');
+            if (idx !== null && messages[idx]) {
+                const rect = target.getBoundingClientRect();
+                const x = rect.left + 20;
+                const y = rect.bottom + 5;
+                showActionMenu(parseInt(idx), x, y, messages[idx].fromMe);
+            }
+        }
+        return false;
+    });
+    msgContainer.addEventListener('touchstart', (e) => {
+        let timer;
+        const target = e.target.closest('.row');
+        if (!target) return;
+        timer = setTimeout(() => {
+            const idx = target.getAttribute('data-msg-idx');
+            if (idx !== null && messages[idx]) {
+                const rect = target.getBoundingClientRect();
+                const x = rect.left + 20;
+                const y = rect.bottom + 5;
+                showActionMenu(parseInt(idx), x, y, messages[idx].fromMe);
+            }
+        }, 500);
+        target.addEventListener('touchend', () => clearTimeout(timer), { once: true });
+        target.addEventListener('touchmove', () => clearTimeout(timer), { once: true });
+    });
+    
+    const renderCardPanel = () => {
+        const panel = document.getElementById('cardPanel');
+        if (!panel) return;
+        panel.innerHTML = '';
+        cards.forEach((c, i) => {
+            const div = document.createElement('div'); div.className = 'card';
+            div.innerHTML = `${c.length>18?c.slice(0,16)+'..':c} <button class="del-btn">✖</button>`;
+            div.querySelector('.del-btn').onclick = (e) => { e.stopPropagation(); cards.splice(i,1); localStorage.setItem('cards', JSON.stringify(cards)); renderCardPanel(); };
+            div.onclick = (e) => { if(e.target !== div.querySelector('.del-btn')) addMsg(c, true); closePanel(); };
+            panel.appendChild(div);
+        });
+        const add = document.createElement('div'); add.className = 'card'; add.innerHTML = '+ 添加字卡';
+        add.onclick = () => { let newCard = prompt('新字卡'); if(newCard) { cards.push(newCard); localStorage.setItem('cards', JSON.stringify(cards)); renderCardPanel(); } };
+        panel.appendChild(add);
+    };
+    const renderEmojiPanel = () => {
+        const panel = document.getElementById('emojiPanel');
+        if (!panel) return;
+        panel.innerHTML = '';
+        emojis.forEach((e, i) => {
+            const div = document.createElement('div'); div.style.display = 'inline-flex'; div.style.flexDirection = 'column'; div.style.alignItems = 'center'; div.style.margin = '4px';
+            div.innerHTML = `<img src="${e.data}" style="width:50px;height:50px;border-radius:12px;"><button class="del-btn">✖</button>`;
+            div.querySelector('.del-btn').onclick = (ev) => { ev.stopPropagation(); emojis.splice(i,1); localStorage.setItem('emojis', JSON.stringify(emojis)); renderEmojiPanel(); };
+            div.onclick = () => { addMsg('[图片]', true, 'emoji', e.data); closePanel(); };
+            panel.appendChild(div);
+        });
+        const add = document.createElement('div'); add.className = 'card'; add.innerHTML = '+ 添加表情';
+        add.onclick = () => { let inp = document.createElement('input'); inp.type='file'; inp.accept='image/*'; inp.onchange=ev=>{ let f=ev.target.files[0]; if(f){ let r=new FileReader(); r.onload=ev2=>{ emojis.push({name:f.name, data:ev2.target.result}); localStorage.setItem('emojis', JSON.stringify(emojis)); renderEmojiPanel(); }; r.readAsDataURL(f); } }; inp.click(); };
+        panel.appendChild(add);
+    };
+    const renderPokePanel = () => {
+        const panel = document.getElementById('pokePanel');
+        if (!panel) return;
+        panel.innerHTML = '';
+        pokes.forEach((p, i) => {
+            const div = document.createElement('div'); div.className = 'card';
+            div.innerHTML = `${p} <button class="del-btn">✖</button>`;
+            div.querySelector('.del-btn').onclick = (e) => { e.stopPropagation(); pokes.splice(i,1); localStorage.setItem('pokes', JSON.stringify(pokes)); renderPokePanel(); };
+            div.onclick = () => { addMsg(`✨ ${my} ${p} ✨`, true); closePanel(); setTimeout(()=>{ if(Math.random()>0.5) addMsg(`✨ ${partner} ${pokes[Math.floor(Math.random()*pokes.length)]} ✨`, false); }, 2000); };
+            panel.appendChild(div);
+        });
+        const add = document.createElement('div'); add.className = 'card'; add.innerHTML = '+ 添加拍一拍';
+        add.onclick = () => { let newPoke = prompt('新动作（如：拍了拍对方的头）'); if(newPoke) { pokes.push(newPoke); localStorage.setItem('pokes', JSON.stringify(pokes)); renderPokePanel(); } };
+        panel.appendChild(add);
+    };
+    
+    const closePanel = () => { document.getElementById('panel').classList.add('hidden'); };
+    const showPanel = (mode) => {
+        document.getElementById('emojiPanel').classList.add('hidden');
+        document.getElementById('cardPanel').classList.add('hidden');
+        document.getElementById('pokePanel').classList.add('hidden');
+        document.getElementById('bgPanel').classList.add('hidden');
+        document.getElementById('voicePanel').classList.add('hidden');
+        if (mode === 'emoji') { document.getElementById('emojiPanel').classList.remove('hidden'); renderEmojiPanel(); }
+        else if (mode === 'card') { document.getElementById('cardPanel').classList.remove('hidden'); renderCardPanel(); }
+        else if (mode === 'poke') { document.getElementById('pokePanel').classList.remove('hidden'); renderPokePanel(); }
+        else if (mode === 'bg') { document.getElementById('bgPanel').classList.remove('hidden'); }
+        else if (mode === 'voice') { document.getElementById('voicePanel').classList.remove('hidden'); }
+        document.getElementById('panel').classList.remove('hidden');
+    };
+    
+    document.getElementById('showEmoji').onclick = () => showPanel('emoji');
+    document.getElementById('showCard').onclick = () => showPanel('card');
+    document.getElementById('showPoke').onclick = () => showPanel('poke');
+    document.getElementById('showBgBtn').onclick = () => showPanel('bg');
+    
+    document.onclick = (e) => {
+        const panel = document.getElementById('panel');
+        const emojiBtn = document.getElementById('showEmoji');
+        const cardBtn = document.getElementById('showCard');
+        const pokeBtn = document.getElementById('showPoke');
+        const bgBtn = document.getElementById('showBgBtn');
+        const voiceBtn = document.getElementById('sendVoiceBtn');
+        if (panel && !panel.contains(e.target) && e.target !== emojiBtn && e.target !== cardBtn && e.target !== pokeBtn && e.target !== bgBtn && e.target !== voiceBtn) closePanel();
+        const menu = document.querySelector('.action-menu');
+        if (menu && !menu.contains(e.target)) menu.remove();
+    };
+    
+    const input = document.getElementById('msgInput');
+    input.onkeypress = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(); } };
+    input.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 80) + 'px'; });
+    document.getElementById('sendBtn').onclick = sendText;
+    
+    loadMsgs();
+    scheduleActive();
+}
+setTimeout(() => {
+    const splash = document.getElementById('splash');
+    if (splash) {
+        splash.style.opacity = '0';
+        setTimeout(() => {
+            splash.remove();
+            document.getElementById('app').style.display = 'flex';
+            initUI();
+        }, 500);
+    } else {
+        document.getElementById('app').style.display = 'flex';
+        initUI();
+    }
+}, 1500);
+</script>
+</body>
+</html>
